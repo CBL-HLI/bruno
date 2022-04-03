@@ -1,5 +1,8 @@
 """Main module."""
 
+from torch_geometric.datasets import Planetoid
+from torch_geometric.transforms import NormalizeFeatures
+
 def fib(n):    # write Fibonacci series up to n
     a, b = 0, 1
     while a < n:

@@ -10,7 +10,15 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=7.0', ]
+install_requires = [
+    "torch",
+    "torch_sparse",
+    "torch_scatter",
+    "torch_geometric",
+    "numpy",
+    "scipy",
+    "networkx"
+]
 
 test_requirements = [ ]
 
@@ -34,7 +42,7 @@ setup(
             'bruno=bruno.cli:main',
         ],
     },
-    install_requires=requirements,
+    install_requires=install_requires,
     license="MIT license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
