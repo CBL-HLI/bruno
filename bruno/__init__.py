@@ -27,6 +27,7 @@ class LazyLoader(ModuleType):
         module = self._load()
         return dir(module)
 
-nn = LazyLoader('nn', globals(), 'torch_geometric.nn')
+nn = LazyLoader('nn', globals(), 'bruno.nn')
+data = LazyLoader('data', globals(), 'data.nn')
 
 __version__ = '0.1.0'

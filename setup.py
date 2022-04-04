@@ -11,13 +11,17 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 install_requires = [
+    "anndata",
+    "graphtools",
+    "matplotlib",
+    "networkx",
+    "numpy",
+    "scipy",
+    "sklearn",
     "torch",
     "torch_sparse",
     "torch_scatter",
-    "torch_geometric",
-    "numpy",
-    "scipy",
-    "networkx"
+    "torch_geometric"
 ]
 
 test_requirements = [ ]
