@@ -71,7 +71,7 @@ def weight_matrix(p1, p2):
     W1[row:(row+divisor), col] = np.random.rand(divisor)
   return W1
 
-def simulate_data(map, n, means, stds, nn):
+def simulate_data(map, n, means, stds, nn, noise):
     r"""Generate graph data
 
     Y = AAXW0W1W2
@@ -134,7 +134,7 @@ def simulate_data(map, n, means, stds, nn):
     W = W/np.linalg.norm(W, axis=0, keepdims=1)
 
     # Compute YW.T=AAX
-    AAX = np.matmul(preprocessing.scale(Y_true), W.T)+ np.random.normal(0, 0.5, size=(A_norm.shape[0], W.shape[0]))
+    AAX = np.matmul(preprocessing.scale(Y_true), W.T) + np.random.normal(0, noise, size=(A_norm.shape[0], W.shape[0]))
 
     # Compute X
     AA_inv = np.linalg.inv(np.matmul(A_norm, A_norm))

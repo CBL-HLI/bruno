@@ -1,6 +1,8 @@
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
 
+## modified from https://github.com/scverse/scvi-tools/blob/master/scvi/nn/_base_components.py
+
 class BRUNO(nn.Module):
     def __init__(
         self,
