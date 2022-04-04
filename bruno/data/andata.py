@@ -31,7 +31,7 @@ class AnnDataToGraphData(InMemoryDataset):
                 group = None, 
                 adjMat = False, 
                 adata: AnnData = None):
-        super().__init__(root, transform)
+        super().__init__(root, transform, adata)
 
         # Node features
         coo = coo_matrix(adata.X, shape=adata.X.shape)
