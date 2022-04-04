@@ -29,7 +29,7 @@ class AnnDataToGraphData(InMemoryDataset):
                  transform: Optional[Callable] = None, 
                  group = None, 
                  adjMat = False, 
-                 adata: AnnData):
+                 adata: AnnData = None):
         super().__init__(transform, group, adjMat, adata)
 
         # Node features
