@@ -30,9 +30,9 @@ data = LazyLoader('data', globals(), 'bruno.data')
 nn = LazyLoader('nn', globals(), 'bruno.nn')
 learn = LazyLoader('learn', globals(), 'bruno.learn')
 
-from bruno.nn import *
-from bruno.data import *
-from bruno.learn import *
+# from bruno.nn import *
+# from bruno.data import *
+# from bruno.learn import *
 
 __all__ = [
     "bruno",
