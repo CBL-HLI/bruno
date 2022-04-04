@@ -1,6 +1,6 @@
 """Top-level package for BRUNO."""
-# from types import ModuleType
-# from importlib import import_module
+from types import ModuleType
+from importlib import import_module
 
 __author__ = """Amrit Singh"""
 __email__ = 'amrit.singh@hli.ubc.ca'
