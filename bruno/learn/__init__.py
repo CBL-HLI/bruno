@@ -1,4 +1,4 @@
-from .learn import Learner
+from .learn import Learn
 from .learn import Hyperparameters
 
 __all__ = [
