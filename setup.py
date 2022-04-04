@@ -18,8 +18,7 @@ install_requires = [
     "numpy",
     "scipy",
     "scprep",
-    "sklearn",
-    "torch"
+    "sklearn"
 ]
 
 test_requirements = [ ]
