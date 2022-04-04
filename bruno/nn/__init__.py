@@ -1,7 +1,7 @@
 from .mlp import MLP
-from .gcn import GCN
+from .bruno import BRUNO
 
 __all__ = [
   'MLP',
-  'GCN'
+  'BRUNO'
 ]

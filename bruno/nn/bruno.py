@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
 
-class GCN(nn.Module):
+class BRUNO(nn.Module):
     def __init__(
         self,
         map,
