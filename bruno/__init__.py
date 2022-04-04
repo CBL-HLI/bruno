@@ -28,6 +28,6 @@ class LazyLoader(ModuleType):
         return dir(module)
 
 nn = LazyLoader('nn', globals(), 'bruno.nn')
-data = LazyLoader('data', globals(), 'data.nn')
+data = LazyLoader('data', globals(), 'bruno.data')
 
 __version__ = '0.1.0'
