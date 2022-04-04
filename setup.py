@@ -17,6 +17,7 @@ install_requires = [
     "networkx",
     "numpy",
     "scipy",
+    "scprep",
     "sklearn",
     "torch",
     "torch_sparse",
