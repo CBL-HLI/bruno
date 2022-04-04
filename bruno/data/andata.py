@@ -111,7 +111,7 @@ def simulate_data(map, n, means, stds, nn):
                         color='black', zorder=0)
         
     ax.set_aspect(1)
-    plt.tight_layout()
+    #plt.tight_layout()
 
     # Compute adjacency matrix
     A = G.kernel.toarray()
