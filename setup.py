@@ -19,10 +19,7 @@ install_requires = [
     "scipy",
     "scprep",
     "sklearn",
-    "torch",
-    "torch_sparse",
-    "torch_scatter",
-    "torch_geometric"
+    "torch"
 ]
 
 test_requirements = [ ]
