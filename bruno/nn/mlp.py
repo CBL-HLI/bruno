@@ -13,6 +13,7 @@ class MLP(nn.Module):
         activation_fn: nn.Module = nn.ReLU
     ):
         super().__init__()
+        self.method = "MLP"
         self.units = list(map.nunique())
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
@@ -68,7 +69,8 @@ class MLP(nn.Module):
         # self.modules.append(nn.Linear(self.units[-2], self.units[-1], bias = self.bias))
         self.layers = nn.Sequential(*self.modules)
     
-    def forward(self, x: torch.Tensor):
+    def forward(self, data):
+        x = data.x
         for i, layers in enumerate(self.layers):
             for layer in layers:
                 x = layer(x)

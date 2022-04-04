@@ -1,7 +1,7 @@
 from .hyperparameters import Hyperparameters
-from .learn import LearnGraph
+from .learn import TrainModel
 
 __all__ = [
   'Hyperparameters',
-  'LearnGraph'
+  'TrainModel'
 ]

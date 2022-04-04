@@ -3,13 +3,13 @@ import torch.nn as nn
 import numpy as np
 import re
 
-class LearnGraph(): 
+class TrainModel(): 
     
     def __init__(self, graph, model, map, args, criterion=None):
         self.args = args
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        self.map = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+        self.map = self.convert_map(model.method, map)
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()
@@ -83,3 +83,9 @@ class LearnGraph():
         w = w.rename(columns = {str(index): '0', str(index+1):'1'})
         w.insert(2, "values", 1)
         return w.pivot(index=['0'], columns=['1']).fillna(0)
+    
+    def convert_map(self, model_name, map):
+        if model_name == "GCN":
+            return dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+        else:
+            return dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])

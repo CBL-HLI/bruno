@@ -13,6 +13,7 @@ class GCN(nn.Module):
         activation_fn: nn.Module = nn.ReLU
     ):
         super().__init__()
+        self.method = "GCN"
         self.units = list(map.nunique())
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
@@ -43,8 +44,8 @@ class GCN(nn.Module):
         self.layers = nn.Sequential(*self.modules)
     
     # def forward(self, x, edge_index):
-    def forward(self, graph):
-        x, edge_index = graph.x, graph.edge_index
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
         for i, layers in enumerate(self.layers):
             for layer in layers:
                 x = layer(x, edge_index)
