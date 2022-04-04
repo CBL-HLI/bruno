@@ -1,5 +1,1 @@
-from .mlp import MLP
-
-__all__ = [
-  'MLP'
-]
+from .mlp import *
