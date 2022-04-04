@@ -27,7 +27,8 @@ class LazyLoader(ModuleType):
         module = self._load()
         return dir(module)
 
-nn = LazyLoader('nn', globals(), 'bruno.nn')
 data = LazyLoader('data', globals(), 'bruno.data')
+nn = LazyLoader('nn', globals(), 'bruno.nn')
+learn = LazyLoader('learn', globals(), 'bruno.learn')
 
 __version__ = '0.1.0'
