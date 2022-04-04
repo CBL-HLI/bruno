@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
+import numpy as np
 import re
-
 
 class LearnGraph(): 
     
@@ -9,7 +9,7 @@ class LearnGraph():
         self.args = args
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        self.map = map
+        self.map = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()
@@ -77,3 +77,9 @@ class LearnGraph():
         correct = float ( truth[self.graph.test_mask].eq(labels).sum().item() )
         acc = correct / self.graph.test_mask.sum().item()
         return pred[self.graph.test_mask], truth[self.graph.test_mask], labels, acc
+
+    def weights(self, map, index):
+        w = map[[str(index), str(index+1)]].drop_duplicates()
+        w = w.rename(columns = {str(index): '0', str(index+1):'1'})
+        w.insert(2, "values", 1)
+        return w.pivot(index=['0'], columns=['1']).fillna(0)
