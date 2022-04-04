@@ -26,11 +26,12 @@ class AnnDataToGraphData(InMemoryDataset):
 
     """
     def __init__(self, 
+    root,
                  transform: Optional[Callable] = None, 
                  group = None, 
                  adjMat = False, 
                  adata: AnnData = None):
-        super().__init__(transform, group, adjMat, adata)
+        super().__init__(root, transform, group, adjMat, adata)
 
         # Node features
         coo = coo_matrix(adata.X, shape=adata.X.shape)
