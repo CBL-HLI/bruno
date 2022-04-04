@@ -1,5 +1,5 @@
 from typing import Callable, Optional
-
+from anndata import AnnData
 import numpy as np
 import pandas as pd
 import matplotlib as plt
@@ -25,11 +25,12 @@ class AnnDataToGraphData(InMemoryDataset):
             (default: :obj:`None`)
 
     """
-    def __init__(self, transform: Optional[Callable] = None, 
+    def __init__(self, 
+                 transform: Optional[Callable] = None, 
                  group = None, 
                  adjMat = False, 
-                 **kwargs):
-        super().__init__('.', transform, group)
+                 adata: AnnData):
+        super().__init__(transform, group, adjMat, adata)
 
         # Node features
         coo = coo_matrix(adata.X, shape=adata.X.shape)
