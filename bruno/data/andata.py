@@ -90,8 +90,7 @@ def simulate_data(map, n, means, stds, nn, noise):
                                       centers=2,
                                       cluster_std = stds, 
                                       center_box = means,
-                                      n_features=2,
-                                      random_state=170)
+                                      n_features=2)
     Y_true = preprocessing.scale(Y_true)
 
     # plot graph
