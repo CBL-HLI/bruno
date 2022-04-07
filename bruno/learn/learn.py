@@ -59,6 +59,7 @@ class TrainModel():
             for name, param in self.model.named_parameters():
                 if re.search("weight", name):
                     weights = param.cpu() * self.map[name]
+                    weights = weights/np.linalg.norm(weights, axis=0, keepdims=1)
                     self.model.state_dict()[name].data.copy_(weights)
         return loss.data.item()
     
