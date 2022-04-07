@@ -18,7 +18,7 @@ class BRUNO(nn.Module):
         self.method = "GCN"
         self.map = map
         if type(self.map) is dict:
-            self.units = self.map.values()
+            self.units = list(self.map.values())
         else:
             self.units = list(self.map.nunique())
         self.use_batch_norm = use_batch_norm
