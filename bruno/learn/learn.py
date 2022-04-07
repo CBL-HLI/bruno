@@ -5,11 +5,11 @@ import re
 
 class TrainModel(): 
     
-    def __init__(self, graph, model, map, args, criterion=None):
+    def __init__(self, graph, model, args, criterion=None):
         self.args = args
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        self.map = self.convert_map(model.method, map)
+        self.map = self.convert_map(model.method, model.map)
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()

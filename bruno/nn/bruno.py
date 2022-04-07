@@ -16,6 +16,7 @@ class BRUNO(nn.Module):
     ):
         super().__init__()
         self.method = "GCN"
+        self.map = map
         self.units = list(map.nunique())
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm

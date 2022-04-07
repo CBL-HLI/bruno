@@ -14,7 +14,8 @@ class MLP(nn.Module):
     ):
         super().__init__()
         self.method = "MLP"
-        self.units = list(map.nunique())
+        self.map = map
+        self.units = list(self.map.nunique())
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
         self.bias = bias
@@ -64,7 +65,7 @@ class MLP(nn.Module):
                             # self.activation_fn() if self.use_activation else None,
                             # nn.Dropout(p=self.dropout_rate) if self.dropout_rate > 0 else None,
                         )
-                    for name, i in zip(map.keys(), range(len(self.units)-1))
+                    for name, i in zip(self.map.keys(), range(len(self.units)-1))
                 ]
         # self.modules.append(nn.Linear(self.units[-2], self.units[-1], bias = self.bias))
         self.layers = nn.Sequential(*self.modules)
