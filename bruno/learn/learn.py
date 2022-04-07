@@ -9,7 +9,10 @@ class TrainModel():
         self.args = args
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        self.map = self.convert_map(model.method, model.map)
+        if model.map is dict:
+            self.map = None
+        else:
+            self.map = self.convert_map(model.method, model.map)
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()
@@ -52,10 +55,11 @@ class TrainModel():
         loss = self.criterion(output[self.graph.train_mask], labels)
         loss.backward()
         self.optim.step()
-        for name, param in self.model.named_parameters():
-            if re.search("weight", name):
-                weights = param.cpu() * self.map[name]
-                self.model.state_dict()[name].data.copy_(weights)
+        if self.map is not None:
+            for name, param in self.model.named_parameters():
+                if re.search("weight", name):
+                    weights = param.cpu() * self.map[name]
+                    self.model.state_dict()[name].data.copy_(weights)
         return loss.data.item()
     
     def val(self) -> float:
