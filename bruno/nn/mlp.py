@@ -15,7 +15,10 @@ class MLP(nn.Module):
         super().__init__()
         self.method = "MLP"
         self.map = map
-        self.units = list(self.map.nunique())
+        if type(self.map) is dict:
+            self.units = self.map.values()
+        else:
+            self.units = list(self.map.nunique())
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
         self.bias = bias
