@@ -9,7 +9,7 @@ class TrainModel():
         self.args = args
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        if model.map is dict:
+        if type(model.map) is dict:
             self.map = None
         else:
             self.map = self.convert_map(model.method, model.map)
