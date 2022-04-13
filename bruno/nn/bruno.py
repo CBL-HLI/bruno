@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch_geometric
 from torch_geometric.nn import GCNConv
 
 ## modified from https://github.com/scverse/scvi-tools/blob/master/scvi/nn/_base_components.py
@@ -7,6 +8,7 @@ class BRUNO(nn.Module):
     def __init__(
         self,
         map,
+        args,
         use_batch_norm: bool = True,
         use_layer_norm: bool = False,
         bias: bool = True,
@@ -17,10 +19,15 @@ class BRUNO(nn.Module):
         super().__init__()
         self.method = "GCN"
         self.map = map
-        if type(self.map) is dict:
-            self.units = list(self.map.values())
+        self.args = args
+        if self.map.shape[0] == 2:
+            units = list(self.map.to_numpy()[0])
+            units[0] = self.args.num_node_features
+            self.units = units
         else:
-            self.units = list(self.map.nunique())
+            units = list(self.map.nunique())
+            units[0] = self.args.num_node_features
+            self.units = units
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
         self.bias = bias
@@ -35,7 +42,8 @@ class BRUNO(nn.Module):
                                 bias= self.bias,
                             ),
                             # non-default params come from defaults in original Tensorflow implementation
-                            # nn.BatchNorm1d(self.units[i+1], momentum=0.01, eps=0.001)
+                            # torch_geometric.nn.norm.BatchNorm(self.units[i+1], momentum=0.01, eps=0.001)
+                            #nn.BatchNorm1d(self.units[i+1], momentum=0.01, eps=0.001)
                             # if self.use_batch_norm
                             # else None,
                             # nn.LayerNorm(self.units[i+1], elementwise_affine=False)

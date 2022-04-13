@@ -2,17 +2,21 @@ import torch
 import torch.nn as nn
 import numpy as np
 import re
+from torch import linalg as LA
 
 class TrainModel(): 
     
     def __init__(self, graph, model, args, criterion=None):
         self.args = args
+        self.epoch = 0
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        if type(model.map) is dict:
-            self.map = None
+        if model.map.shape[0] == 2:
+            self.mask = self.keepX(self.model.method, self.model.map.iloc[1])
         else:
-            self.map = self.convert_map(model.method, model.map)
+            map = self.convert_map(self.model.method, self.model.map)
+            map[next(iter(map))] = torch.cat((map[next(iter(map))], torch.tensor(np.zeros((self.model.units[1], self.model.units[0]-list(self.model.map.nunique())[0])))), 1)
+            self.mask = map
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()
@@ -42,6 +46,7 @@ class TrainModel():
                 torch.save(self.model, "best_model.pt")
             
             if abs(self.best_loss - vl) < 0.000001:
+                self.epoch = epoch
                 self.train_complete = True
         # self.train_complete = True
         
@@ -55,12 +60,24 @@ class TrainModel():
         loss = self.criterion(output[self.graph.train_mask], labels)
         loss.backward()
         self.optim.step()
-        if self.map is not None:
+        if self.model.map.shape[0] == 2:
             for name, param in self.model.named_parameters():
                 if re.search("weight", name):
-                    weights = param.cpu() * self.map[name]
-                    weights = weights/np.linalg.norm(weights, axis=0, keepdims=1)
+                    weights = param.cpu().clone()
+                    weights = self.soft_thresholding(weights, self.mask[name].item())
+                    # weights = weights.detach().numpy()
+                    #weights = self.l2(weights)
+                    #weights = weights/LA.matrix_norm(weights)
                     self.model.state_dict()[name].data.copy_(weights)
+        else:
+            for name, param in self.model.named_parameters():
+                if re.search("weight", name):
+                    weights = param.cpu().clone() * self.mask[name]
+                    # weights = weights.detach().numpy()
+                    #weights = self.l2(weights)
+                    weights = weights/LA.matrix_norm(weights)
+                    self.model.state_dict()[name].data.copy_(weights)
+
         return loss.data.item()
     
     def val(self) -> float:
@@ -94,3 +111,25 @@ class TrainModel():
             return dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         else:
             return dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+
+    def keepX(self, model_name, map):
+        if model_name == "GCN":
+            return dict([(''.join(["layers.", str(i), ".0.lin.weight"]), map[i]) for i in range(len(map)-1)])
+        else:
+            return dict([(''.join(["layers.", str(i), ".0.weight"]), map[i]) for i in range(len(map)-1)])
+
+    def func(self, x, keep=2):
+        x1 = torch.zeros(len(x))
+        x1[torch.argsort(abs(x), descending = False)[0:keep]]=1
+        return x1*x
+
+    def soft_thresholding(self, weights, keepX = 2):
+        for i in list(range(weights.shape[0])):
+          weights[i,:] = self.func(weights[i,:], keepX)
+          #weights[i,:] = weights[i,:]/torch.linalg.norm(weights[i,:])
+        return weights
+    
+    def l2(self, w):
+        for i in list(range(w.shape[0])):
+          w[i,:] = w[i,:]/torch.linalg.norm(w[i,:])
+        return w

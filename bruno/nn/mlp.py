@@ -5,6 +5,7 @@ class MLP(nn.Module):
     def __init__(
         self,
         map,
+        args,
         use_batch_norm: bool = True,
         use_layer_norm: bool = False,
         bias: bool = True,
@@ -15,10 +16,15 @@ class MLP(nn.Module):
         super().__init__()
         self.method = "MLP"
         self.map = map
-        if type(self.map) is dict:
-            self.units = list(self.map.values())
+        self.args = args
+        if self.map.shape[0] == 2:
+            units = list(self.map.to_numpy()[0])
+            units[0] = self.args.num_node_features
+            self.units = units
         else:
-            self.units = list(self.map.nunique())
+            units = list(self.map.nunique())
+            units[0] = self.args.num_node_features
+            self.units = units
         self.use_batch_norm = use_batch_norm
         self.use_layer_norm = use_layer_norm
         self.bias = bias
