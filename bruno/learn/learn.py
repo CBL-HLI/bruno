@@ -62,7 +62,7 @@ class TrainModel():
         self.optim.step()
         if self.model.map.shape[0] == 2:
             for name, param in self.model.named_parameters():
-                if re.search("weight", name):
+                if re.search("lin.weight", name):
                     weights = param.cpu().clone()
                     weights = self.soft_thresholding(weights, self.mask[name].item())
                     # weights = weights.detach().numpy()
@@ -71,7 +71,7 @@ class TrainModel():
                     self.model.state_dict()[name].data.copy_(weights)
         else:
             for name, param in self.model.named_parameters():
-                if re.search("weight", name):
+                if re.search("lin.weight", name):
                     weights = param.cpu().clone() * self.mask[name]
                     # weights = weights.detach().numpy()
                     #weights = self.l2(weights)

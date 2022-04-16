@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class MLP(nn.Module):
     def __init__(
@@ -65,7 +66,7 @@ class MLP(nn.Module):
                                 bias= self.bias,
                             ),
                             # non-default params come from defaults in original Tensorflow implementation
-                            # nn.BatchNorm1d(self.units[i+1], momentum=0.01, eps=0.001)
+                            nn.BatchNorm1d(self.units[i+1], momentum=0.01, eps=0.001)
                             # if self.use_batch_norm
                             # else None,
                             # nn.LayerNorm(self.units[i+1], elementwise_affine=False)
@@ -76,12 +77,12 @@ class MLP(nn.Module):
                         )
                     for name, i in zip(self.map.keys(), range(len(self.units)-1))
                 ]
-        # self.modules.append(nn.Linear(self.units[-2], self.units[-1], bias = self.bias))
+        self.modules.append(nn.Sequential(nn.Linear(self.units[-1], self.args.num_classes, bias = self.bias)))
         self.layers = nn.Sequential(*self.modules)
     
     def forward(self, data):
         x = data.x
         for i, layers in enumerate(self.layers):
             for layer in layers:
-                x = layer(x)
+                x = F.relu(layer(x))
         return x
