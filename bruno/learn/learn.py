@@ -14,9 +14,9 @@ class TrainModel():
         if model.map.shape[0] == 2:
             self.mask = self.keepX(self.model.method, self.model.map.iloc[1])
         else:
-            map = self.convert_map(self.model.method, self.model.map)
-            map[next(iter(map))] = torch.cat((map[next(iter(map))], torch.tensor(np.zeros((self.model.units[1], self.model.units[0]-list(self.model.map.nunique())[0])))), 1)
-            self.mask = map
+            self.mask = self.convert_map(self.model.method, self.model.map)
+            # map[next(iter(map))] = torch.cat((map[next(iter(map))], torch.tensor(np.zeros((self.model.units[1], self.model.units[0]-list(self.model.map.nunique())[0])))), 1)
+            # self.mask = map
         
         if not criterion: 
             criterion = nn.CrossEntropyLoss()
