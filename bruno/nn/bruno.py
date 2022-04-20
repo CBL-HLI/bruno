@@ -10,31 +10,22 @@ class BRUNO(nn.Module):
         self,
         map,
         args,
-        use_batch_norm: bool = True,
-        use_layer_norm: bool = False,
-        bias: bool = True,
-        dropout_rate: float = 0.1,
-        use_activation: bool = True,
-        activation_fn: nn.Module = nn.ReLU
+        bias: bool = True
     ):
         super().__init__()
         self.method = "GCN"
         self.map = map
+        self.map_f = self.map.apply(lambda x: pd.factorize(x)[0])
         self.args = args
         if self.map.shape[0] == 2:
-            units = list(self.map.to_numpy()[0])
+            units = list(self.map_f.to_numpy()[0])
             units[0] = self.args.num_node_features
             self.units = units
         else:
-            units = list(self.map.nunique())
+            units = list(self.map_f.nunique())
             units[0] = self.args.num_node_features
             self.units = units
-        self.use_batch_norm = use_batch_norm
-        self.use_layer_norm = use_layer_norm
         self.bias = bias
-        self.dropout_rate = dropout_rate
-        self.use_activation = use_activation
-        self.activation_fn = activation_fn
         self.modules = [
                         nn.Sequential(
                             GCNConv(
@@ -42,28 +33,25 @@ class BRUNO(nn.Module):
                                 self.units[i+1],
                                 bias= self.bias,
                             ),
-                            # non-default params come from defaults in original Tensorflow implementation
                             nn.BatchNorm1d(self.units[i+1], momentum=0.01, eps=0.001)
-                            # if self.use_batch_norm
-                            # else None,
-                            # nn.LayerNorm(self.units[i+1], elementwise_affine=False)
-                            # if self.use_layer_norm
-                            # else None,
-                            # self.activation_fn() if self.use_activation else None,
-                            # nn.Dropout(p=self.dropout_rate) if self.dropout_rate > 0 else None,
                         )
-                    for name, i in zip(self.map.keys(), range(len(self.units)-1))
+                    for name, i in zip(self.map_f.keys(), range(len(self.units)-1))
                 ]
         self.modules.append(nn.Sequential(nn.Linear(self.units[-1], self.args.num_classes, bias = self.bias)))
         self.layers = nn.Sequential(*self.modules)
     
-    # def forward(self, x, edge_index):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
+        outputs = []
         for i, layers in enumerate(self.layers):
             for layer in layers:
                 if isinstance(layer, nn.Linear) or isinstance(layer, nn.BatchNorm1d):
-                    x = F.relu(layer(x))
+                    if i == (len(layers)-1):
+                        x = layer(x)
+                    else:
+                        x = F.relu(layer(x))
                 else:
                     x = F.relu(layer(x, edge_index))
-        return x
+            ## save embeddings
+            outputs.append(x.cpu().detach().numpy())
+        return x, outputs
