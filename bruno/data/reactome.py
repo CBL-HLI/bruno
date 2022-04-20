@@ -235,7 +235,7 @@ class ReactomeNetwork():
         return layers
     
     def get_map(self, n_levels):
-        layers = reactome_net.get_layers(n_levels)
+        layers = self.get_layers(n_levels)
         map = {}
         layers_names = ['layer'+str(i) for i in range(len(layers))]
 
