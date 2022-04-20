@@ -13,7 +13,6 @@ with open('HISTORY.rst') as history_file:
 install_requires = [
     "anndata",
     "graphtools",
-    "itertools",
     "matplotlib",
     "networkx",
     "numpy",
