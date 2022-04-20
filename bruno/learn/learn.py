@@ -156,6 +156,7 @@ class TrainModel():
     def metrics(self) -> float:
         if self.train_complete:
             y_true = self.graph.y[self.graph.test_mask]
+            y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
             y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
@@ -170,6 +171,7 @@ class TrainModel():
         else:
             self.test()
             y_true = self.graph.y[self.graph.test_mask]
+            y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
             y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
