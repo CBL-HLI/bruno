@@ -16,7 +16,7 @@ install_requires = [
     "matplotlib",
     "networkx",
     "numpy",
-    "pandas"
+    "pandas",
     "scipy",
     "scprep",
     "sklearn"
