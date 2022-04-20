@@ -10,6 +10,7 @@ import scprep as scprep
 import matplotlib.pyplot as plt
 import seaborn as sns; sns.set_theme()
 import plotly.graph_objects as go
+import pandas as pd
 
 import warnings
 warnings.simplefilter("ignore")
@@ -316,7 +317,7 @@ class TrainModel():
         top_layer = layerlist[-1]
         cat_cols = layerlist.copy()
         layerlist.reverse()
-        df = pd.DataFrame(self.model.map[self.model.map[pathway_layer] == pathway]).groupby(layerlist).size()
+        df = pd.DataFrame(self.model.map[self.model.map[top_layer] == pathway]).groupby(layerlist).size()
         df = df.reset_index()
         df = df.apply(lambda x: [names_df[names_df['reactome_id'] == x]['pathway_name'].to_numpy()[0] if type(x) is not int else x for x in x], axis=0)
 

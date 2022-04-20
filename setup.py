@@ -17,8 +17,10 @@ install_requires = [
     "networkx",
     "numpy",
     "pandas",
+    "plotly",
     "scipy",
     "scprep",
+    "seaborn",
     "sklearn"
 ]
 
