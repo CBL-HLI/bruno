@@ -156,7 +156,8 @@ class TrainModel():
     def metrics(self) -> float:
         if self.train_complete:
             y_true = self.graph.y[self.graph.test_mask]
-            y_scores, outputs = self.model(self.graph)
+            y_scores, outputs_all = self.model(self.graph)
+            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             try:
                 auc = metrics.roc_auc_score(y_true, y_scores)
             except ValueError:
@@ -169,6 +170,7 @@ class TrainModel():
             self.test()
             y_true = self.graph.y[self.graph.test_mask]
             y_scores, outputs = self.model(self.graph)
+            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
                   'recall': [metrics.recall_score(y_true, y_scores)],
                   'auc': [auc],
