@@ -6,6 +6,30 @@ from os.path import join
 import itertools
 
 
+def get_map(reactome_net, n_levels):
+    layers = reactome_net.get_layers(n_levels)
+    map = {}
+    layers_names = ['layer'+str(i) for i in range(len(layers))]
+
+    for i, layer in enumerate(layers[::-1]):
+      list2d = [ [x] *len(layer[x]) for x in list(layer.keys())]
+      target = list(itertools.chain(*list2d))
+      source = list(itertools.chain.from_iterable(layer.values()))
+      df = pd.DataFrame({'source':source , 'target':target})
+      df = df.rename(columns={'source': 'layer'+str(i), 'target': 'layer'+str(i+1)})
+      map[i] = df
+
+    df = map[0]
+    for i in range(len(map)-1):
+      df = df.merge(map[i+1], how="inner", on="layer"+str(i+1))
+    
+    map = df.iloc[:, :-1]
+    map2 = map.copy()
+    for index in range(len(map.keys())-1):
+      map2 = map2[map2[map.columns[index]] != map2[map.columns[index+1]]]
+    
+    return map2
+
 # data_dir = os.path.dirname(__file__)
 class GMT():
     # genes_cols : start reading genes from genes_col(default 1, it can be 2 e.g. if an information col is added after the pathway col)
@@ -233,27 +257,3 @@ class ReactomeNetwork():
 
         layers.append(dict)
         return layers
-    
-    def get_map(self, n_levels):
-        layers = self.get_layers(n_levels)
-        map = {}
-        layers_names = ['layer'+str(i) for i in range(len(layers))]
-
-        for i, layer in enumerate(layers[::-1]):
-          list2d = [ [x] *len(layer[x]) for x in list(layer.keys())]
-          target = list(itertools.chain(*list2d))
-          source = list(itertools.chain.from_iterable(layer.values()))
-          df = pd.DataFrame({'source':source , 'target':target})
-          df = df.rename(columns={'source': 'layer'+str(i), 'target': 'layer'+str(i+1)})
-          map[i] = df
-
-        df = map[0]
-        for i in range(len(map)-1):
-          df = df.merge(map[i+1], how="inner", on="layer"+str(i+1))
-        
-        map = df.iloc[:, :-1]
-        map2 = map
-        for index in range(len(map.keys())-1):
-          map2 = map2[map2[map.columns[index]] != map2[map.columns[index+1]]]
-        
-        return map2
