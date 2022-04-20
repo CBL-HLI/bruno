@@ -109,15 +109,15 @@ class TrainModel():
         if not self.train_complete: 
             self.learn()
         self.model.eval()
-        labels = self.graph.y[self.graph.test_mask]
-        pred, outputs = self.model(self.graph)
-        _, truth = pred.max(dim=1)
-        correct = float ( truth[self.graph.test_mask].eq(labels).sum().item() )
+        y_true = self.graph.y[self.graph.test_mask]
+        y_score, outputs = self.model(self.graph)
+        _, y_pred = y_score.max(dim=1)
+        correct = float ( y_pred[self.graph.test_mask].eq(y_true).sum().item() )
         acc = correct / self.graph.test_mask.sum().item()
-        pred = pred[self.graph.test_mask].cpu().detach().numpy()
-        truth = truth[self.graph.test_mask].cpu().detach().numpy()
-        labels = labels.cpu().detach().numpy()
-        return pred, truth, labels, acc
+        y_score = y_score[self.graph.test_mask].cpu().detach().numpy()
+        y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
+        y_true = y_true.cpu().detach().numpy()
+        return y_score, y_pred, y_true, acc
 
     def weights(self, map, index):
         w = map[[str(index), str(index+1)]].drop_duplicates()
@@ -155,19 +155,24 @@ class TrainModel():
     
     def metrics(self) -> float:
         if self.train_complete:
-            labels = self.graph.y[self.graph.test_mask]
-            pred, outputs = self.model(self.graph)
-            _, truth = pred.max(dim=1)
-            met = pd.DataFrame({'precision': [metrics.precision_score(truth, labels)],
-                  'recall': [metrics.recall_score(truth, labels)],
-                  'auc': [metrics.roc_auc_score(truth, labels)],
-                  'bacc': [metrics.balanced_accuracy_score(truth, labels)]})
+            y_true = self.graph.y[self.graph.test_mask]
+            y_scores, outputs = self.model(self.graph)
+            try:
+                auc = metrics.roc_auc_score(y_true, y_scores)
+            except ValueError:
+                pass
+            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
+                  'recall': [metrics.recall_score(y_true, y_scores)],
+                  'auc': [auc],
+                  'bacc': [metrics.balanced_accuracy_score(y_true, y_scores)]})
         else:
-            pred, truth, labels, acc = self.test()
-            met = pd.DataFrame({'precision': [metrics.precision_score(truth, labels)],
-                  'recall': [metrics.recall_score(truth, labels)],
-                  'auc': [metrics.roc_auc_score(truth, labels)],
-                  'bacc': [metrics.balanced_accuracy_score(truth, labels)]})
+            self.test()
+            y_true = self.graph.y[self.graph.test_mask]
+            y_scores, outputs = self.model(self.graph)
+            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
+                  'recall': [metrics.recall_score(y_true, y_scores)],
+                  'auc': [auc],
+                  'bacc': [metrics.balanced_accuracy_score(y_true, y_scores)]})
         return met
     
     def plot_pca(self) -> None:
