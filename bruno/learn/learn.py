@@ -159,10 +159,9 @@ class TrainModel():
             y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
-            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
-                auc = metrics.roc_auc_score(y_true, y_scores)
+                auc = metrics.roc_auc_score(y_true, y_pred)
             except ValueError:
                 auc = 'Cannot be computed'
             met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_pred)],
@@ -175,10 +174,9 @@ class TrainModel():
             y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
-            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
-                auc = metrics.roc_auc_score(y_true, y_scores)
+                auc = metrics.roc_auc_score(y_true, y_pred)
             except ValueError:
                 auc = 'Cannot be computed'
             met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_pred)],
