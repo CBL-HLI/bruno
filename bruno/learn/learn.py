@@ -160,14 +160,15 @@ class TrainModel():
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
             y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
+            y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
                 auc = metrics.roc_auc_score(y_true, y_scores)
             except ValueError:
                 auc = 'Cannot be computed'
-            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
-                  'recall': [metrics.recall_score(y_true, y_scores)],
+            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_pred)],
+                  'recall': [metrics.recall_score(y_true, y_pred)],
                   'auc': [auc],
-                  'bacc': [metrics.balanced_accuracy_score(y_true, y_scores)]})
+                  'bacc': [metrics.balanced_accuracy_score(y_true, y_pred)]})
         else:
             self.test()
             y_true = self.graph.y[self.graph.test_mask]
@@ -175,10 +176,11 @@ class TrainModel():
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
             y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
-            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
-                  'recall': [metrics.recall_score(y_true, y_scores)],
+            y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
+            met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_pred)],
+                  'recall': [metrics.recall_score(y_true, y_pred)],
                   'auc': [auc],
-                  'bacc': [metrics.balanced_accuracy_score(y_true, y_scores)]})
+                  'bacc': [metrics.balanced_accuracy_score(y_true, y_pred)]})
         return met
     
     def plot_pca(self) -> None:
