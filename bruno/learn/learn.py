@@ -160,7 +160,7 @@ class TrainModel():
             try:
                 auc = metrics.roc_auc_score(y_true, y_scores)
             except ValueError:
-                pass
+                auc = 'Cannot be computed'
             met = pd.DataFrame({'precision': [metrics.precision_score(y_true, y_scores)],
                   'recall': [metrics.recall_score(y_true, y_scores)],
                   'auc': [auc],
