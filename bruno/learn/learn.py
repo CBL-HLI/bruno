@@ -180,14 +180,14 @@ class TrainModel():
             embeddings['inputs'] = pca.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
             for i, output in enumerate(outputs):
                 pca = PCA(n_components=2)
-                h = output[self.data.test_mask.cpu().detach().numpy()]
+                h = output[self.graph.test_mask.cpu().detach().numpy()]
                 if i == (len(outputs)-1):
                     embeddings['output'] = pca.fit_transform(h)
                 else:
                     embeddings['layer'+str(i+1)] = pca.fit_transform(h)
             ## plot embeddings
             fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.data.y[self.data.test_mask].cpu().detach().numpy()
+            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
             for i, dataset_name in enumerate(embeddings):
                 ax = axes[i]
                 pcs = embeddings[dataset_name]
@@ -207,14 +207,14 @@ class TrainModel():
             embeddings['inputs'] = pca.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
             for i, output in enumerate(outputs):
                 pca = PCA(n_components=2)
-                h = output[self.data.test_mask.cpu().detach().numpy()]
+                h = output[self.graph.test_mask.cpu().detach().numpy()]
                 if i == (len(outputs)-1):
                     embeddings['output'] = pca.fit_transform(h)
                 else:
                     embeddings['layer'+str(i+1)] = pca.fit_transform(h)
             ## plot embeddings
             fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.data.y[self.data.test_mask].cpu().detach().numpy()
+            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
             for i, dataset_name in enumerate(embeddings):
                 ax = axes[i]
                 pcs = embeddings[dataset_name]
@@ -236,14 +236,14 @@ class TrainModel():
             embeddings['inputs'] = tsne.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
             for i, output in enumerate(outputs):
                 tsne = TSNE(n_components=2)
-                h = output[self.data.test_mask.cpu().detach().numpy()]
+                h = output[self.graph.test_mask.cpu().detach().numpy()]
                 if i == (len(outputs)-1):
                     embeddings['output'] = tsne.fit_transform(h)
                 else:
                     embeddings['layer'+str(i+1)] = tsne.fit_transform(h)
             ## plot embeddings
             fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.data.y[self.data.test_mask].cpu().detach().numpy()
+            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
             for i, dataset_name in enumerate(embeddings):
                 ax = axes[i]
                 pcs = embeddings[dataset_name]
@@ -264,14 +264,14 @@ class TrainModel():
             embeddings['inputs'] = tsne.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
             for i, output in enumerate(outputs):
                 tsne = TSNE(n_components=2)
-                h = output[self.data.test_mask.cpu().detach().numpy()]
+                h = output[self.graph.test_mask.cpu().detach().numpy()]
                 if i == (len(outputs)-1):
                     embeddings['output'] = tsne.fit_transform(h)
                 else:
                     embeddings['layer'+str(i+1)] = tsne.fit_transform(h)
             ## plot embeddings
             fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.data.y[self.data.test_mask].cpu().detach().numpy()
+            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
             for i, dataset_name in enumerate(embeddings):
                 ax = axes[i]
                 pcs = embeddings[dataset_name]
