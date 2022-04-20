@@ -77,13 +77,13 @@ class PrepareAnnData():
     
     def anndata(self) -> float:
         com_genes = set(self.data.columns).intersection(self.map['layer0'])
-        eset_subset = all[com_genes]
+        eset_subset = self.data[com_genes]
         map = self.map.loc[self.map['layer0'].isin(com_genes)]
         map.columns = [i for i in range(len(map.columns))]
         map.index = map.index.map(str)
         map.columns = map.columns.map(str)
 
-        obs_meta = pd.DataFrame(all[obs_vars].values, columns=obs_vars)
+        obs_meta = pd.DataFrame(self.data[self.obs_vars].values, columns=self.obs_vars)
         adata = ad.AnnData(eset_subset.to_numpy(), obs=obs_meta)
 
         return adata, map
