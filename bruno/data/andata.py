@@ -49,7 +49,7 @@ class AnnDataToGraphData(InMemoryDataset):
             adj = csr_matrix(adjMat).tocoo()
         else:
             #adj = csr_matrix(np.transpose(pd.get_dummies(adata.obs)).corr()).tocoo()
-            Y_true = adata.obs[list(set(obs_vars).difference(set([group])))]
+            Y_true = adata.obs[list(set(adata.obs_keys()).difference(set([group])))]
             G = gt.Graph(Y_true, knn=knn)
             adj = csr_matrix(G.kernel.toarray()).tocoo()
 
