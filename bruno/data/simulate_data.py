@@ -3,6 +3,7 @@ from sklearn import datasets, preprocessing
 import graphtools as gt
 import scipy as sp
 import scprep as scprep
+import pandas as pd
 
 def weight_matrix(p1, p2):
   W1 = np.zeros((p1, p2))
