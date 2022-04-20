@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch_geometric
 from torch_geometric.nn import GCNConv
 import torch.nn.functional as F
+import pandas as pd
 
 ## modified from https://github.com/scverse/scvi-tools/blob/master/scvi/nn/_base_components.py
 
