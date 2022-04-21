@@ -30,7 +30,7 @@ class AnnDataToGraphData(InMemoryDataset):
                 root: str,
                 transform: Optional[Callable] = None, 
                 group = None, 
-                adjMat = False, 
+                adjMat = None, 
                 adata: AnnData = None,
                 knn = 3):
         super().__init__(root, transform, adata)
