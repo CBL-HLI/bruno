@@ -159,6 +159,7 @@ class TrainModel():
             y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
+            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
                 auc = metrics.roc_auc_score(y_true, y_scores)
@@ -172,6 +173,7 @@ class TrainModel():
             y_true = y_true.cpu().detach().numpy()
             output, outputs_all = self.model(self.graph)
             y_scores, y_pred = output.max(dim=1)
+            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
             y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
                 auc = metrics.roc_auc_score(y_true, y_scores)
