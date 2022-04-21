@@ -327,14 +327,15 @@ class TrainModel():
             ax = sns.heatmap(self.cim, linewidths=.5, cmap="YlGnBu", cbar_kws={'label': "Variable importance"})
             ax.set(xlabel='top-level layer', ylabel='Class')
 
-    def plot_subnetwork(self, names_df, pathway, figheight=500, figwidth=700):
+    def plot_subnetwork(self, names_df=None, pathway=None, figheight=500, figwidth=700):
         layerlist = list(self.model.map.columns)[1:]
         top_layer = layerlist[-1]
         cat_cols = layerlist.copy()
         layerlist.reverse()
         df = pd.DataFrame(self.model.map[self.model.map[top_layer] == pathway]).groupby(layerlist).size()
         df = df.reset_index()
-        df = df.apply(lambda x: [names_df[names_df['reactome_id'] == x]['pathway_name'].to_numpy()[0] if type(x) is not int else x for x in x], axis=0)
+        if names_df is not None:
+            df = df.apply(lambda x: [names_df[names_df['reactome_id'] == x]['pathway_name'].to_numpy()[0] if type(x) is not int else x for x in x], axis=0)
 
         df_sankey = genSankey(df, cat_cols=cat_cols, value_cols=0)
         fig = go.Figure(data=[go.Sankey(
