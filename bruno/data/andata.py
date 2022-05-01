@@ -14,7 +14,6 @@ import graphtools as gt
 from sklearn import datasets, preprocessing
 import scipy as sp
 import scprep as scprep
-import graphtools as gt
 
 class AnnDataToGraphData(InMemoryDataset):
     r"""Convert AnnData Object to PyTorch Geometric Data

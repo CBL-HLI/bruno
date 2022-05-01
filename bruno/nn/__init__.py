@@ -1,7 +1,9 @@
-from .mlp import MLP
-from .bruno import BRUNO
+from .modules import Encoder
+from .modules import Decoder
+from .modules import AE
 
 __all__ = [
-  'MLP',
-  'BRUNO'
+  'Encoder',
+  'Decoder',
+  'AE'
 ]

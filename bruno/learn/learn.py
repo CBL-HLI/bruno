@@ -11,27 +11,55 @@ import matplotlib.pyplot as plt
 import seaborn as sns; sns.set_theme()
 import plotly.graph_objects as go
 import pandas as pd
+import torch.nn.functional as F
 
 import warnings
 warnings.simplefilter("ignore")
 
+# https://debuggercafe.com/using-learning-rate-scheduler-and-early-stopping-with-pytorch/
+class EarlyStopping():
+    """
+    Early stopping to stop the training when the loss does not improve after
+    certain epochs.
+    """
+    def __init__(self, patience=5, min_delta=0):
+        """
+        :param patience: how many epochs to wait before stopping when loss is
+               not improving
+        :param min_delta: minimum difference between new loss and old loss for
+               new loss to be considered as an improvement
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+    def __call__(self, val_loss):
+        if self.best_loss == None:
+            self.best_loss = val_loss
+        elif self.best_loss - val_loss > self.min_delta:
+            self.best_loss = val_loss
+            # reset counter if validation loss improves
+            self.counter = 0
+        elif self.best_loss - val_loss < self.min_delta:
+            self.counter += 1
+            # print(f"INFO: Early stopping counter {self.counter} of {self.patience}")
+            if self.counter >= self.patience:
+                # print('INFO: Early stopping')
+                self.early_stop = True
 
 class TrainModel(): 
     
-    def __init__(self, graph, model, args, criterion=None):
+    def __init__(self, graph, model, args):
         self.args = args
-        self.last_loss = self.args.last_loss
-        self.trigger_times = self.args.trigger_times
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
-        if model.map.shape[0] == 2:
-            self.mask = self.keepX(self.model.method, self.model.map.iloc[1])
+        self.early_stopping = EarlyStopping(args.patience, args.min_delta)
+        self.mask = self.convert_map(self.args.method, self.model.map_f, args.num_classes)
+        if self.args.num_classes == None:
+            self.criterion = nn.MSELoss()
         else:
-            self.mask = self.convert_map(self.model.method, self.model.map_f)
-        
-        if not criterion: 
-            criterion = nn.CrossEntropyLoss()
-        self.criterion = criterion
+            self.criterion = nn.CrossEntropyLoss()
         
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.args.lr, weight_decay=self.args.w_decay)
         
@@ -39,10 +67,9 @@ class TrainModel():
         self.val_loss = []
         self.train_complete = False
         self.cim = None
+        self.weights = []
         
     def learn(self) -> None:
-        # tracks training and validation loss over epochs
-        # can add early stopping mechanism by comparing losses
         for epoch in range(self.args.epochs): 
             if self.train_complete: return
             
@@ -51,56 +78,40 @@ class TrainModel():
             
             vl = self.val()
             self.val_loss.append(vl)
-
-            # Early stopping
-            print('Epoch:' + str(epoch), 'Training loss: ' + str(tl))
-            print('Epoch:' + str(epoch), 'Validation loss: ' + str(vl))
-
-            if vl > self.last_loss:
-              self.trigger_times += 1
-              if self.trigger_times >= self.args.patience:
-                print('Early stopping')
+            self.early_stopping(vl)
+            if self.early_stopping.early_stop:
                 self.train_complete = True
-            else:
-              self.trigger_times = 0
-            self.last_loss = vl
+                print('Epoch:' + str(epoch), 'Training loss: ' + str(tl))
+                print('Epoch:' + str(epoch), 'Validation loss: ' + str(vl))
+
         self.train_complete = True
+        print('Epoch:' + str(epoch+1), 'Training loss: ' + str(round(tl)))
+        print('Epoch:' + str(epoch+1), 'Validation loss: ' + str(round(vl)))
         
     def train_epoch(self) -> float:
-        # trains a single epoch (ie. one pass over the full graph) and updates the models parameters
-        # returns the loss
         self.model.train()
-        labels = self.graph.y[self.graph.train_mask]
+        y_true = self.graph.y[self.graph.train_mask]
         self.optim.zero_grad()
-        output, outputs = self.model(self.graph) 
-        loss = self.criterion(output[self.graph.train_mask], labels)
+        y_pred, outputs = self.model(self.graph.x, self.graph.edge_index) 
+        loss = self.criterion(y_pred[self.graph.train_mask], y_true)
         loss.backward()
         self.optim.step()
-        if self.model.map.shape[0] == 2:
-            for name, param in self.model.named_parameters():
-                if re.search("lin.weight", name):
-                    weights = param.cpu().clone()
-                    weights = self.soft_thresholding(weights, self.mask[name].item())
-                    # weights = weights.detach().numpy()
-                    #weights = self.l2(weights)
-                    #weights = weights/LA.matrix_norm(weights)
-                    self.model.state_dict()[name].data.copy_(weights)
-        else:
-            for name, param in self.model.named_parameters():
-                if re.search("lin.weight", name):
-                    weights = param.cpu().clone() * self.mask[name]
-                    # weights = weights.detach().numpy()
-                    #weights = self.l2(weights)
-                    #weights = weights/LA.matrix_norm(weights)
-                    self.model.state_dict()[name].data.copy_(weights)
-
+        w = {}
+        for name, param in self.model.named_parameters():
+            if re.search("0.weight", name):
+                weights = param.cpu().clone()
+                weights = weights * self.mask[name]
+                weights = F.normalize(weights, p=2, dim=1)
+                w[name] = weights
+                self.model.state_dict()[name].data.copy_(weights)
+        self.weights.append(w)
         return loss.data.item()
     
     def val(self) -> float:
         # returns the validation loss 
         self.model.eval()
         labels = self.graph.y[self.graph.val_mask]
-        output, outputs = self.model(self.graph) 
+        output, outputs = self.model(self.graph.x, self.graph.edge_index) 
         loss = self.criterion(output[self.graph.val_mask], labels)
         return loss.data.item()
 
@@ -110,14 +121,29 @@ class TrainModel():
             self.learn()
         self.model.eval()
         y_true = self.graph.y[self.graph.test_mask]
-        y_score, outputs = self.model(self.graph)
-        _, y_pred = y_score.max(dim=1)
-        correct = float ( y_pred[self.graph.test_mask].eq(y_true).sum().item() )
-        acc = correct / self.graph.test_mask.sum().item()
-        y_score = y_score[self.graph.test_mask].cpu().detach().numpy()
+        output, outputs = self.model(self.graph.x, self.graph.edge_index)
+        _, y_pred = output.max(dim=1)
+        output = output[self.graph.test_mask].cpu().detach().numpy()
         y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
         y_true = y_true.cpu().detach().numpy()
-        return y_score, y_pred, y_true, acc
+        return output, y_true, y_pred
+    
+    def plot_loss(self) -> None:
+        if not self.train_complete: 
+            self.learn()
+        if self.args.num_classes == None:
+            self.loss("Mean Square Error")
+        else:
+            self.loss("Cross Entrophy Loss")
+          
+    def loss(self, loss_name) -> None:
+        plt.plot(self.train_loss, color='r')
+        plt.plot(self.val_loss, color='b')
+        plt.yscale('log',basey=10)
+        plt.xscale('log')
+        plt.xlabel("epoch")
+        plt.ylabel(loss_name)
+        plt.legend(['Training loss', 'Validation loss'])
 
     def weights(self, map, index):
         w = map[[str(index), str(index+1)]].drop_duplicates()
@@ -125,11 +151,16 @@ class TrainModel():
         w.insert(2, "values", 1)
         return w.pivot(index=['0'], columns=['1']).fillna(0)
     
-    def convert_map(self, model_name, map):
-        if model_name == "GCN":
-            return dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+    def convert_map(self, method, map, n_classes):
+        p = map.nunique().tolist()
+        if method == "GCNConv":
+            mask = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+        elif method == "GATConv":
+            mask = dict([(''.join(["layers.", str(i), ".0.lin.src.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         else:
-            return dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+            mask = dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+        mask['layers.'+str(len(mask))+'.0.weight'] = torch.ones(n_classes, p[len(p)-1])
+        return mask
 
     def keepX(self, model_name, map):
         if model_name == "GCN":
@@ -145,7 +176,6 @@ class TrainModel():
     def soft_thresholding(self, weights, keepX = 2):
         for i in list(range(weights.shape[0])):
           weights[i,:] = self.func(weights[i,:], keepX)
-          #weights[i,:] = weights[i,:]/torch.linalg.norm(weights[i,:])
         return weights
     
     def l2(self, w):
@@ -154,176 +184,117 @@ class TrainModel():
         return w
     
     def metrics(self) -> float:
-        if self.train_complete:
-            y_true = self.graph.y[self.graph.test_mask]
-            y_true = y_true.cpu().detach().numpy()
-            output, outputs_all = self.model(self.graph)
-            y_scores, y_pred = output.max(dim=1)
-            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
-            y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
-            try:
-                auc = metrics.roc_auc_score(y_true, y_scores)
-            except ValueError:
-                auc = 'Cannot be computed'
-            met = pd.DataFrame({'auc': [auc],
-                  'bacc': [metrics.balanced_accuracy_score(y_true, y_pred)]})
+        if not self.train_complete: 
+            self.learn()
+        metrics = self.compute_metrics()
+        return metrics
+
+    def compute_metrics(self) -> None:
+        output, y_true, y_pred = self.test()
+        if self.args.num_classes == None:
+            met = pd.DataFrame({'method': self.args.method,
+                                'mse': [metrics.mean_squared_error(y_true, output)]})
         else:
-            self.test()
-            y_true = self.graph.y[self.graph.test_mask]
-            y_true = y_true.cpu().detach().numpy()
-            output, outputs_all = self.model(self.graph)
-            y_scores, y_pred = output.max(dim=1)
-            y_scores = y_scores[self.graph.test_mask].cpu().detach().numpy()
-            y_pred = y_pred[self.graph.test_mask].cpu().detach().numpy()
             try:
-                auc = metrics.roc_auc_score(y_true, y_scores)
+                if self.args.num_classes == 2:
+                    auc = metrics.roc_auc_score(y_true, output[:,1])
+                    classes = np.array(list(set(y_true)))
+                    cm = metrics.confusion_matrix(y_true, y_pred, labels=classes)
+                    disp = metrics.ConfusionMatrixDisplay(confusion_matrix=cm,
+                                                  display_labels=classes)
+                    disp.plot()
+                else:
+                    auc = 'Cannot be computed'
             except ValueError:
                 auc = 'Cannot be computed'
-            met = pd.DataFrame({'auc': [auc],
+            met = pd.DataFrame({'method': self.args.method,
+                                'auc': [auc],
                   'bacc': [metrics.balanced_accuracy_score(y_true, y_pred)]})
         return met
     
     def plot_pca(self) -> None:
-        if self.train_complete:
-            # make predictions using trained model
-            pred, outputs = self.model(self.graph)
-            ## compute PCA of embeddings
-            embeddings = {}
-            pca = PCA(n_components=2)
-            embeddings['inputs'] = pca.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
-            for i, output in enumerate(outputs):
-                pca = PCA(n_components=2)
-                h = output[self.graph.test_mask.cpu().detach().numpy()]
-                if i == (len(outputs)-1):
-                    embeddings['output'] = pca.fit_transform(h)
-                else:
-                    embeddings['layer'+str(i+1)] = pca.fit_transform(h)
-            ## plot embeddings
-            fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
-            for i, dataset_name in enumerate(embeddings):
-                ax = axes[i]
-                pcs = embeddings[dataset_name]
-                scprep.plot.scatter2d(pcs, c=col,
-                                      ticks=None, ax=ax, 
-                                      xlabel='PC1', ylabel='PC2',
-                                      title=dataset_name,
-                                    legend=False)
-        else:     
-            # train model
-            self.test()
-            # make predictions using trained model
-            pred, outputs = self.model(self.graph)
-            ## compute PCA of embeddings
-            embeddings = {}
-            pca = PCA(n_components=2)
-            embeddings['inputs'] = pca.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
-            for i, output in enumerate(outputs):
-                pca = PCA(n_components=2)
-                h = output[self.graph.test_mask.cpu().detach().numpy()]
-                if i == (len(outputs)-1):
-                    embeddings['output'] = pca.fit_transform(h)
-                else:
-                    embeddings['layer'+str(i+1)] = pca.fit_transform(h)
-            ## plot embeddings
-            fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
-            for i, dataset_name in enumerate(embeddings):
-                ax = axes[i]
-                pcs = embeddings[dataset_name]
-                scprep.plot.scatter2d(pcs, c=col,
-                                      ticks=None, ax=ax, 
-                                      xlabel='PC1', ylabel='PC2',
-                                      title=dataset_name,
-                                    legend=False)
-                
-            fig.tight_layout()
-
+        if not self.train_complete: 
+            self.learn()
+        self.pca()
+    
     def plot_tsne(self) -> None:
-        if self.train_complete:
-            # make predictions using trained model
-            pred, outputs = self.model(self.graph)
-            ## compute TSNE of embeddings
-            embeddings = {}
+        if not self.train_complete: 
+            self.learn()
+        self.tsne()
+    
+    def pca(self) -> None:
+        pred, outputs = self.model(self.graph.x, self.graph.edge_index)
+        ## compute PCA of embeddings
+        embeddings = {}
+        pca = PCA(n_components=2)
+        embeddings['inputs'] = pca.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
+        for i, output in enumerate(outputs):
+            pca = PCA(n_components=2)
+            h = output[self.graph.test_mask.cpu().detach().numpy()]
+            if i == (len(outputs)-1):
+                embeddings['output'] = pca.fit_transform(h)
+            else:
+                embeddings['layer'+str(i+1)] = pca.fit_transform(h)
+        ## plot embeddings
+        fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
+        col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
+        for i, dataset_name in enumerate(embeddings):
+            ax = axes[i]
+            pcs = embeddings[dataset_name]
+            scprep.plot.scatter2d(pcs, c=col,
+                                  ticks=None, ax=ax, 
+                                  xlabel='PC1', ylabel='PC2',
+                                  title=dataset_name,
+                                legend=False)
+            
+        fig.tight_layout()
+
+    def tsne(self) -> None:
+        # make predictions using trained model
+        pred, outputs = self.model(self.graph.x, self.graph.edge_index)
+        ## compute TSNE of embeddings
+        embeddings = {}
+        tsne = TSNE(n_components=2)
+        embeddings['inputs'] = tsne.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
+        for i, output in enumerate(outputs):
             tsne = TSNE(n_components=2)
-            embeddings['inputs'] = tsne.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
-            for i, output in enumerate(outputs):
-                tsne = TSNE(n_components=2)
-                h = output[self.graph.test_mask.cpu().detach().numpy()]
-                if i == (len(outputs)-1):
-                    embeddings['output'] = tsne.fit_transform(h)
-                else:
-                    embeddings['layer'+str(i+1)] = tsne.fit_transform(h)
-            ## plot embeddings
-            fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
-            for i, dataset_name in enumerate(embeddings):
-                ax = axes[i]
-                pcs = embeddings[dataset_name]
-                scprep.plot.scatter2d(pcs, c=col,
-                                      ticks=None, ax=ax, 
-                                      xlabel='TSNE1', ylabel='TSNE2',
-                                      title=dataset_name,
-                                    legend=False)              
-            fig.tight_layout()
-        else:
-            # train model
-            self.test()
-            # make predictions using trained model
-            pred, outputs = self.model(self.graph)
-            ## compute TSNE of embeddings
-            embeddings = {}
-            tsne = TSNE(n_components=2)
-            embeddings['inputs'] = tsne.fit_transform(self.graph.x.cpu().detach().numpy()[self.graph.test_mask.cpu().detach().numpy()])
-            for i, output in enumerate(outputs):
-                tsne = TSNE(n_components=2)
-                h = output[self.graph.test_mask.cpu().detach().numpy()]
-                if i == (len(outputs)-1):
-                    embeddings['output'] = tsne.fit_transform(h)
-                else:
-                    embeddings['layer'+str(i+1)] = tsne.fit_transform(h)
-            ## plot embeddings
-            fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
-            col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
-            for i, dataset_name in enumerate(embeddings):
-                ax = axes[i]
-                pcs = embeddings[dataset_name]
-                scprep.plot.scatter2d(pcs, c=col,
-                                      ticks=None, ax=ax, 
-                                      xlabel='TSNE1', ylabel='TSNE2',
-                                      title=dataset_name,
-                                    legend=False)    
-            fig.tight_layout()
+            h = output[self.graph.test_mask.cpu().detach().numpy()]
+            if i == (len(outputs)-1):
+                embeddings['output'] = tsne.fit_transform(h)
+            else:
+                embeddings['layer'+str(i+1)] = tsne.fit_transform(h)
+        ## plot embeddings
+        fig, axes = plt.subplots(1,len(embeddings),figsize=(12,2))
+        col = self.graph.y[self.graph.test_mask].cpu().detach().numpy()
+        for i, dataset_name in enumerate(embeddings):
+            ax = axes[i]
+            pcs = embeddings[dataset_name]
+            scprep.plot.scatter2d(pcs, c=col,
+                                  ticks=None, ax=ax, 
+                                  xlabel='TSNE1', ylabel='TSNE2',
+                                  title=dataset_name,
+                                legend=False)    
+        fig.tight_layout()
+    
     
     def get_weights(self) -> float:
+        if not self.train_complete: 
+              self.learn()
         w={}
-        if self.train_complete:
-            for name, param in self.model.named_parameters():
-                #if re.search("lin.weight", name):
-                w[name] = param
-        else:
-            self.test()
-            for name, param in self.model.named_parameters():
+        for name, param in self.model.named_parameters():
                 #if re.search("lin.weight", name):
                 w[name] = param
         return w
       
     def plot_weights_of_last_layer(self, figsize=(10, 5)) -> None:
-        if self.train_complete:
-            w = self.get_weights()
-            cim=w[list(w.keys())[-1]].cpu().detach().numpy()
-            self.cim = pd.DataFrame(cim, columns=list(self.model.map.iloc[:, -1].unique()))
-            f, ax = plt.subplots(figsize=figsize)
-            ax = sns.heatmap(self.cim, linewidths=.5, cmap="YlGnBu", cbar_kws={'label': "Variable importance"})
-            ax.set(xlabel='top-level layer', ylabel='Class')
-        else:
-            self.test()
-            w = self.get_weights()
-            cim=w[list(w.keys())[-1]].cpu().detach().numpy()
-            self.cim = pd.DataFrame(cim, columns=list(self.model.map.iloc[:, -1].unique()))
-            f, ax = plt.subplots(figsize=figsize)
-            ax = sns.heatmap(self.cim, linewidths=.5, cmap="YlGnBu", cbar_kws={'label': "Variable importance"})
-            ax.set(xlabel='top-level layer', ylabel='Class')
+        if not self.train_complete: 
+            self.learn()
+        w = self.get_weights()
+        cim=w[list(w.keys())[-1]].cpu().detach().numpy()
+        self.cim = pd.DataFrame(cim, columns=list(self.model.map.iloc[:, -1].unique()))
+        f, ax = plt.subplots(figsize=figsize)
+        ax = sns.heatmap(self.cim, linewidths=.5, cmap="YlGnBu", cbar_kws={'label': "Variable importance"})
+        ax.set(xlabel='top-level layer', ylabel='Class')
 
     def plot_subnetwork(self, names_df=None, pathway=None, figheight=500, figwidth=700):
         layerlist = list(self.model.map.columns)[1:]
