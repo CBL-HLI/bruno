@@ -125,7 +125,7 @@ class Decoder(nn.Module):
                                     self.units[i],
                                     bias= self.bias,
                                 )
-                            , nn.BatchNorm1d(self.units[i], momentum=0.01, eps=0.001)
+                            , nn.BatchNorm1d(self.units[i])
                         ))
             elif self.args.method == "GATConv":
                 self.modules.append(nn.Sequential(
@@ -135,7 +135,7 @@ class Decoder(nn.Module):
                                     bias= self.bias,
                                     heads=1
                                 )
-                            , nn.BatchNorm1d(self.units[i], momentum=0.01, eps=0.001)
+                            , nn.BatchNorm1d(self.units[i])
                         ))
             elif self.args.method == "ANN":
                 self.modules.append(nn.Sequential(
@@ -144,7 +144,7 @@ class Decoder(nn.Module):
                                     self.units[i],
                                     bias= self.bias,
                                 )
-                            , nn.BatchNorm1d(self.units[i], momentum=0.01, eps=0.001)
+                            , nn.BatchNorm1d(self.units[i])
                         ))
             else:
                 raise ValueError('args.type shoud be one of "GCNConv", "GATConv", or "ANN"')
