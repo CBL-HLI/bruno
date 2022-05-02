@@ -55,7 +55,7 @@ class TrainModel():
         self.graph = graph.to(self.args.device)
         self.model = model.to(self.args.device)
         self.early_stopping = EarlyStopping(args.patience, args.min_delta)
-        self.mask = self.convert_map(self.args.method, self.model.map_f, args.num_classes)
+        self.mask = self.convert_map(self.model, self.args)
         if self.args.num_classes == None:
             self.criterion = nn.MSELoss()
         else:
@@ -151,15 +151,36 @@ class TrainModel():
         w.insert(2, "values", 1)
         return w.pivot(index=['0'], columns=['1']).fillna(0)
     
-    def convert_map(self, method, map, n_classes):
+    def convert_map(self, model, args):
+        map = model.map_f
+        method = args.method
+        n_classes = args.num_classes
         p = map.nunique().tolist()
         if method == "GCNConv":
-            mask = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+            mask = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         elif method == "GATConv":
-            mask = dict([(''.join(["layers.", str(i), ".0.lin.src.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+            mask = dict([(''.join(["layers.", str(i), ".0.lin.src.weight"]), torch.tensor(np.transpose(weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         else:
-            mask = dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
-        mask['layers.'+str(len(mask))+'.0.weight'] = torch.ones(n_classes, p[len(p)-1])
+            mask = dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+        if n_classes is not None:
+            mask['layers.'+str(len(mask))+'.0.weight'] = torch.ones(n_classes, p[len(p)-1])
+        else:
+            ## get weight names
+            weight_names = []
+            for name, param in model.named_parameters():
+                if method == "GCNConv":
+                    if re.search(".0.lin.weight", name):
+                        weight_names.append(name)
+                elif method == "GATConv":
+                    if re.search(".0.lin.src.weight", name):
+                        weight_names.append(name)
+                else:
+                    if re.search("0.weight", name):
+                        weight_names.append(name)
+            mask0 = {}
+            for i, key in enumerate(mask.keys()):
+                mask0[weight_names[i]] = mask[key]
+            mask = mask0
         return mask
 
     def keepX(self, model_name, map):
