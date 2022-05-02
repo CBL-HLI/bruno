@@ -184,6 +184,9 @@ class AE(nn.Module):
     def __init__(self, map, args):
         super().__init__()
         self.map = map
+        self.map_f = self.map.apply(lambda x: pd.factorize(x)[0])
+        self.map_f = pd.concat([self.map_f, self.map_f[self.map_f.columns[::-1]].iloc[:,1:]], axis=1)
+        self.map_f.columns = [str(i) for i in list(range(0, self.map_f.shape[1]))]
         self.args = args
         self.args.num_classes = None
         self.encoder = Encoder(self.map, self.args)
