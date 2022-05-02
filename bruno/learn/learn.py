@@ -106,7 +106,7 @@ class TrainModel():
                     w[name] = weights
                     self.model.state_dict()[name].data.copy_(weights)
             elif self.args.method == "GATConv":
-                if re.search(".0.lin.src.weight", name):
+                if re.search(".0.lin_src.weight", name):
                     weights = param.cpu().clone()
                     weights = weights * self.mask[name]
                     weights = F.normalize(weights, p=2, dim=1)
@@ -174,7 +174,7 @@ class TrainModel():
         if method == "GCNConv":
             mask = dict([(''.join(["layers.", str(i), ".0.lin.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         elif method == "GATConv":
-            mask = dict([(''.join(["layers.", str(i), ".0.lin.src.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
+            mask = dict([(''.join(["layers.", str(i), ".0.lin_src.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         else:
             mask = dict([(''.join(["layers.", str(i), ".0.weight"]), torch.tensor(np.transpose(self.weights(map, i).to_numpy()))) for i in range(len(map.columns)-1)])
         if n_classes is not None:
@@ -187,7 +187,7 @@ class TrainModel():
                     if re.search(".0.lin.weight", name):
                         weight_names.append(name)
                 elif method == "GATConv":
-                    if re.search(".0.lin.src.weight", name):
+                    if re.search(".0.lin_src.weight", name):
                         weight_names.append(name)
                 else:
                     if re.search("0.weight", name):
