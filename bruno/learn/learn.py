@@ -98,12 +98,27 @@ class TrainModel():
         self.optim.step()
         w = {}
         for name, param in self.model.named_parameters():
-            if re.search("0.weight", name):
-                weights = param.cpu().clone()
-                weights = weights * self.mask[name]
-                weights = F.normalize(weights, p=2, dim=1)
-                w[name] = weights
-                self.model.state_dict()[name].data.copy_(weights)
+            if self.args.method == "GCNConv":
+                if re.search(".0.lin.weight", name):
+                    weights = param.cpu().clone()
+                    weights = weights * self.mask[name]
+                    weights = F.normalize(weights, p=2, dim=1)
+                    w[name] = weights
+                    self.model.state_dict()[name].data.copy_(weights)
+            elif self.args.method == "GATConv":
+                if re.search(".0.lin.src.weight", name):
+                    weights = param.cpu().clone()
+                    weights = weights * self.mask[name]
+                    weights = F.normalize(weights, p=2, dim=1)
+                    w[name] = weights
+                    self.model.state_dict()[name].data.copy_(weights)
+            else:
+                if re.search("0.weight", name):
+                    weights = param.cpu().clone()
+                    weights = weights * self.mask[name]
+                    weights = F.normalize(weights, p=2, dim=1)
+                    w[name] = weights
+                    self.model.state_dict()[name].data.copy_(weights)
         self.weights.append(w)
         return loss.data.item()
     
