@@ -50,7 +50,7 @@ class Encoder(nn.Module):
                                 )
                             , nn.BatchNorm1d(self.units[i+1])
                         ))
-            elif self.args.method == "MLP":
+            elif self.args.method == "ANN":
                 self.modules.append(nn.Sequential(
                                 Linear(
                                     self.units[i],
@@ -60,14 +60,14 @@ class Encoder(nn.Module):
                             , nn.BatchNorm1d(self.units[i+1])
                         ))
             else:
-                raise ValueError('args.type shoud be one of "GCNConv", "GATConv", or "MLP"')
+                raise ValueError('args.type shoud be one of "GCNConv", "GATConv", or "ANN"')
         if self.args.num_classes is not None:
             self.modules.append(nn.Sequential(nn.Linear(self.units[-1], self.args.num_classes, bias = self.bias)))
         self.layers = nn.Sequential(*self.modules)
     
     def forward(self, data, edge_index = None):
         x = data
-        if self.args.method == "MLP":
+        if self.args.method == "ANN":
             outputs = []
             for i, layers in enumerate(self.layers):
                 for layer in layers:
@@ -137,7 +137,7 @@ class Decoder(nn.Module):
                                 )
                             , nn.BatchNorm1d(self.units[i], momentum=0.01, eps=0.001)
                         ))
-            elif self.args.method == "MLP":
+            elif self.args.method == "ANN":
                 self.modules.append(nn.Sequential(
                                 Linear(
                                     self.units[i+1],
@@ -147,13 +147,13 @@ class Decoder(nn.Module):
                             , nn.BatchNorm1d(self.units[i], momentum=0.01, eps=0.001)
                         ))
             else:
-                raise ValueError('args.type shoud be one of "GCNConv", "GATConv", or "MLP"')
+                raise ValueError('args.type shoud be one of "GCNConv", "GATConv", or "ANN"')
         # if self.args.num_classes is not None:
         #     self.modules.append(nn.Sequential(nn.Linear(self.units[-1], self.args.num_classes, bias = self.bias)))
         self.layers = nn.Sequential(*self.modules)
     
     def forward(self, data, edge_index = None):
-        if self.args.method == "MLP":
+        if self.args.method == "ANN":
             x = data
             outputs = []
             for i, layers in enumerate(self.layers):
@@ -191,7 +191,7 @@ class AE(nn.Module):
 
     def forward(self, data, edge_index = None):
         x = data
-        if self.args.method == "MLP":
+        if self.args.method == "ANN":
             x, encoded_embeddings = self.encoder(x)
             x, decoded_embeddings = self.decoder(x)
         else:
