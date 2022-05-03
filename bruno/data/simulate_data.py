@@ -14,7 +14,7 @@ def weight_matrix(p1, p2):
     W1[row:(row+divisor), col] = np.random.rand(divisor)
   return W1
 
-def simulate_data(map, n, means, stds, nn, noise):
+def simulate_data(map, n, means, stds, nn, noise, plot=False):
     r"""Generate graph data
 
     Y = AAXW0W1W2
@@ -34,32 +34,33 @@ def simulate_data(map, n, means, stds, nn, noise):
                                       cluster_std = stds, 
                                       center_box = means,
                                       n_features=2)
+    #Y_true = Y_true
     Y_true = preprocessing.scale(Y_true)
 
     # plot graph
     G = gt.Graph(Y_true, knn=nn)
 
     # This code draws the nodes of the graph
-    title = 'mu1='+str(means[0])+' mu2='+str(means[1])
-    ax = scprep.plot.scatter2d(Y_true, c=y, 
-                              xlabel='Component 1', ylabel='Component 2',
-                              title=title, figsize=(8,6),
-                              legend=False)
+    if plot:
+        title = 'mu1='+str(means[0])+' mu2='+str(means[1])
+        ax = scprep.plot.scatter2d(Y_true, c=y, 
+                                  xlabel='Component 1', ylabel='Component 2',
+                                  title=title, figsize=(8,6),
+                                  legend=False)
 
-    # This block of code draws lines between each point and its neighbors
-    for i in range(Y_true.shape[0]-1):
-        for j in range(i+1, Y_true.shape[0]):
-            affinity = G.kernel[i,j]
-            if affinity > 0:
-                ax.plot(Y_true[[i,j],0], Y_true[[i,j],1],
-                        color='black', zorder=0)
+        # This block of code draws lines between each point and its neighbors
+        for i in range(Y_true.shape[0]-1):
+            for j in range(i+1, Y_true.shape[0]):
+                affinity = G.kernel[i,j]
+                if affinity > 0:
+                    ax.plot(Y_true[[i,j],0], Y_true[[i,j],1],
+                            color='black', zorder=0)
         
-    ax.set_aspect(1)
-    #plt.tight_layout()
+        ax.set_aspect(1)
+        #plt.tight_layout()
 
     # Compute adjacency matrix
     A = G.kernel.toarray()
-    #A[A > 0] = 1
     Ahat = A + np.eye(A.shape[0])
     D = sp.sparse.diags(np.power(np.array(Ahat.sum(1)), -0.5).flatten(), 0)
     A_norm = np.matmul(np.matmul(D.toarray(), Ahat), D.toarray())
@@ -67,21 +68,22 @@ def simulate_data(map, n, means, stds, nn, noise):
     # compute weight matrices
     map = map.apply(lambda x: pd.factorize(x)[0])
     p = map.nunique().tolist()
+    p.append(2)
     Wlist=list()
     for i in range(len(p)-1):
       W0 = weight_matrix(p[i], p[i+1])
       W0 = W0/np.linalg.norm(W0, axis=0, keepdims=1)
       Wlist.append(W0)
-    # Wlist[0] = np.concatenate((Wlist[0], np.zeros((p_total-p[0], Wlist[0].shape[1]))), axis=0)
     W = np.linalg.multi_dot(Wlist)
     W = W/np.linalg.norm(W, axis=0, keepdims=1)
+    W = np.linalg.pinv(W)
 
     # Compute YW.T=AAX
-    AAX = np.matmul(preprocessing.scale(Y_true), W.T) + np.random.normal(0, noise, size=(A_norm.shape[0], W.shape[0]))
+    AAX = preprocessing.scale(np.matmul(Y_true, W) + np.random.normal(0, noise, size=(A_norm.shape[0], W.shape[1])))
 
     # Compute X
     AA_inv = np.linalg.inv(np.matmul(A_norm, A_norm))
     X = np.matmul(AA_inv, AAX)
     #X = cX)
 
-    return A, A_norm, AAX, Wlist, W, X, y
+    return A, G, A_norm, AAX, Wlist, W, X, y
